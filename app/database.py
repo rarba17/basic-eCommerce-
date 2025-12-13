@@ -2,12 +2,12 @@ from motor.motor_asyncio import AsyncIOMotorClient
 from app.config import settings
 
 class Database:
-  client: AsyncIOMotorClient = None
+  client: AsyncIOMotorClient |None = None
   database = None
 
   async def connect(self):
     self.client = AsyncIOMotorClient(settings.mongodb_url)
-    self.database = self.client(settings.database_name)
+    self.database = self.client[settings.database_name] 
     print("connected to mongo")
 
   async def disconnect(self):

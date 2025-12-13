@@ -1,4 +1,5 @@
 from datetime import datetime,timezone,UTC
+from unittest import result
 from bson import ObjectId
 from app.Schemas import user
 from app.database import db
@@ -16,6 +17,20 @@ class UserModel:
   async def get_user_by_email(self,email:str) -> dict:
     return await self.collection.find_one({"email":email})
 
-  async def get_user_by_id(self, id:str) -> dict:
+  async def get_user_by_id(self, user_id:str) -> dict:
     return await self.collection.find_one({"_id":ObjectId(user_id)})
+
+  async def update_user(self, user_id:str, update_data:dict) -> bool:
+    update_data["updated_at"] = datetime.now(timezone.utc)
+    result = await self.collection.update_one(
+      {"_id": ObjectId(user_id)}, {"$set": update_data}
+    )
+    return result.modified_count > 0
+
+  async def delete_user(self,user_id:str) -> bool:
+    result = await self.collection.delete_one(
+      {"_id":ObjectId(user_id)}
+    )
+    return result.deleted_count > 0
+
 

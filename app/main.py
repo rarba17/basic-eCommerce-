@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 import app
 from app.config import settings
 from app.database import db
-from app.routers import products,orders
+from app.routers import products, orders, auth, cart
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -31,8 +31,11 @@ app.add_middleware(
   allow_headers = ["*"],
 )
 
-#app.include_router(products.router)
-#app.include_router(orders.router)
+app.include_router(auth.router)
+app.include_router(products.router)
+app.include_router(orders.router)
+app.include_router(cart.router)
+
 
 @app.get("/")
 async def root():

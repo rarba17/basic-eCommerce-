@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime,timezone
 from bson import ObjectId
 from app.database import db
 
@@ -7,8 +7,8 @@ class ProductModel:
         self.collection = db.get_collection("products")
 
     async def create_product(self, product_data: dict) -> str:
-        product_data["created_at"] = datetime.utcnow()
-        product_data["updated_at"] = datetime.utcnow()
+        product_data["created_at"] = datetime.now(timezone.utc)
+        product_data["updated_at"] = datetime.now(timezone.utc)
         result = await self.collection.insert_one(product_data)
         return str(result.inserted_id)
 
@@ -24,7 +24,7 @@ class ProductModel:
         return await cursor.to_list(length=limit)
 
     async def update_product(self, product_id: str, update_data: dict) -> bool:
-        update_data["updated_at"] = datetime.utcnow()
+        update_data["updated_at"] = datetime.now(timezone.utc)
         result = await self.collection.update_one(
             {"_id": ObjectId(product_id)}, {"$set": update_data}
         )

@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime,timezone
 from bson import ObjectId
 from app.database import db
 
@@ -7,7 +7,7 @@ class OrderModel:
         self.collection = db.get_collection("orders")
 
     async def create_order(self, order_data: dict) -> str:
-        order_data["created_at"] = datetime.utcnow()
+        order_data["created_at"] = datetime.now(timezone.utc)
         result = await self.collection.insert_one(order_data)
         return str(result.inserted_id)
 
@@ -21,11 +21,11 @@ class OrderModel:
     async def update_order_status(self, order_id: str, status: str) -> bool:
         update_data = {
             "status": status,
-            "updated_at": datetime.utcnow()
+            "updated_at": datetime.now(timezone.utc)
         }
         if status == "delivered":
             update_data["is_delivered"] = True
-            update_data["delivered_at"] = datetime.utcnow()
+            update_data["delivered_at"] = datetime.now(timezone.utc)
 
         result = await self.collection.update_one(
             {"_id": ObjectId(order_id)}, {"$set": update_data}
@@ -35,7 +35,7 @@ class OrderModel:
     async def update_payment_status(self, order_id: str, is_paid: bool) -> bool:
         update_data = {
             "is_paid": is_paid,
-            "paid_at": datetime.utcnow() if is_paid else None
+            "paid_at": datetime.now(timezone.utc) if is_paid else None
         }
         result = await self.collection.update_one(
             {"_id": ObjectId(order_id)}, {"$set": update_data}

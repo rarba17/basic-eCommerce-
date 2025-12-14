@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime,timezone
 from bson import ObjectId
 from app.database import db
 from typing import List, Optional, Dict
@@ -17,8 +17,8 @@ class CartModel:
             "user_id": user_id,
             "items": [],
             "total_amount": 0.0,
-            "created_at": datetime.utcnow(),
-            "updated_at": datetime.utcnow()
+            "created_at": datetime.now(timezone.utc),
+            "updated_at": datetime.now(timezone.utc)
         }
         result = await self.collection.insert_one(cart_data)
         return str(result.inserted_id)
@@ -62,7 +62,7 @@ class CartModel:
                 "$set": {
                     "items": cart["items"],
                     "total_amount": total_amount,
-                    "updated_at": datetime.utcnow()
+                    "updated_at": datetime.now(timezone.utc)
                 }
             }
         )
@@ -86,7 +86,7 @@ class CartModel:
                 "$set": {
                     "items": cart["items"],
                     "total_amount": total_amount,
-                    "updated_at": datetime.utcnow()
+                    "updated_at": datetime.now(timezone.utc)
                 }
             }
         )
@@ -118,7 +118,7 @@ class CartModel:
                 "$set": {
                     "items": cart["items"],
                     "total_amount": total_amount,
-                    "updated_at": datetime.utcnow()
+                    "updated_at": datetime.now(timezone.utc)
                 }
             }
         )
@@ -132,7 +132,7 @@ class CartModel:
                 "$set": {
                     "items": [],
                     "total_amount": 0.0,
-                    "updated_at": datetime.utcnow()
+                    "updated_at": datetime.now(timezone.utc)
                 }
             }
         )

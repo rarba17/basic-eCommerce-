@@ -6,6 +6,12 @@ class OrderModel:
     def __init__(self):
         self.collection = db.get_collection("orders")
 
+    @property
+    def collection(self):
+        if self._collection is None:
+            self._collection = db.get_collection("orders")
+        return self._collection
+
     async def create_order(self, order_data: dict) -> str:
         order_data["created_at"] = datetime.now(timezone.utc)
         result = await self.collection.insert_one(order_data)

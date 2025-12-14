@@ -8,6 +8,12 @@ class UserModel:
   def __init__(self):
     self.collection = db.get_collections("users")
 
+  @property
+  def collection(self):
+      if self._collection is None:
+          self._collection = db.get_collection("users")
+      return self._collection
+
   async def create_user(self, user_data: dict) -> str:
     user_data["created_at"] = datetime.now(timezone.utc)
     user_data["updated_at"] = datetime.now(timezone.utc)

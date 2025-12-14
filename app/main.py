@@ -32,9 +32,9 @@ app.add_middleware(
 )
 
 app.include_router(auth.router)
-app.include_router(products.router)
-app.include_router(orders.router)
-app.include_router(cart.router)
+#app.include_router(products.router)
+#app.include_router(orders.router)
+#app.include_router(cart.router)
 
 
 @app.get("/")

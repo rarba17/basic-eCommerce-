@@ -7,6 +7,12 @@ class CartModel:
     def __init__(self):
         self.collection = db.get_collection("carts")
 
+    @property
+    def collection(self):
+        if self._collection is None:
+            self._collection = db.get_collection("carts")
+        return self._collection
+
     async def get_cart_by_user_id(self, user_id: str) -> Optional[Dict]:
         """Get cart for a specific user"""
         return await self.collection.find_one({"user_id": user_id})

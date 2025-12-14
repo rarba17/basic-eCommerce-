@@ -1,12 +1,12 @@
 from datetime import datetime, timedelta,timezone
 from typing import Optional
-from warnings import deprecated
+
 from click import pass_context
 from jose import jwt, JWTError
 from passlib.context import CryptContext
 from app.config import settings
 
-pwd_context = CryptContext(schemes=["bycrypt"],deprecated = "auto")
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 def verify_password(plain_password:str,hashed_password:str) -> bool:
   return pass_context.verify(plain_password,hashed_password)

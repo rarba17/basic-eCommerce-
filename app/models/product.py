@@ -6,6 +6,12 @@ class ProductModel:
     def __init__(self):
         self.collection = db.get_collection("products")
 
+    @property
+    def collection(self):
+        if self._collection is None:
+            self._collection = db.get_collection("products")
+        return self._collection
+
     async def create_product(self, product_data: dict) -> str:
         product_data["created_at"] = datetime.now(timezone.utc)
         product_data["updated_at"] = datetime.now(timezone.utc)

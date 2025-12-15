@@ -1,36 +1,29 @@
-from datetime import datetime,timezone
+from datetime import datetime
 from bson import ObjectId
 from app.database import db
+from typing import List, Optional
 
 class ProductModel:
-    def __init__(self):
-        self.collection = db.get_collection("products")
-
     @property
     def collection(self):
-        if self._collection is None:
-            self._collection = db.get_collection("products")
-        return self._collection
+        return db.get_collection("products")
 
     async def create_product(self, product_data: dict) -> str:
-        product_data["created_at"] = datetime.now(timezone.utc)
-        product_data["updated_at"] = datetime.now(timezone.utc)
+        product_data["created_at"] = datetime.utcnow()
+        product_data["updated_at"] = datetime.utcnow()
         result = await self.collection.insert_one(product_data)
         return str(result.inserted_id)
 
-    async def get_product_by_id(self, product_id: str) -> dict:
+    async def get_product_by_id(self, product_id: str) -> Optional[dict]:
         return await self.collection.find_one({"_id": ObjectId(product_id)})
 
     async def get_all_products(self, skip: int = 0, limit: int = 100, category: str = None):
-        query = {}
-        if category:
-            query["category"] = category
-
+        query = {} if not category else {"category": category}
         cursor = self.collection.find(query).skip(skip).limit(limit)
         return await cursor.to_list(length=limit)
 
     async def update_product(self, product_id: str, update_data: dict) -> bool:
-        update_data["updated_at"] = datetime.now(timezone.utc)
+        update_data["updated_at"] = datetime.utcnow()
         result = await self.collection.update_one(
             {"_id": ObjectId(product_id)}, {"$set": update_data}
         )

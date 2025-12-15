@@ -13,8 +13,16 @@ router = APIRouter(prefix="/auth", tags=["authentication"])
 #user_model = UserModel()
 security = HTTPBearer()
 
-async def get_user_model():
-    return UserModel()
+def get_user_model():
+    """Get user model instance"""
+    try:
+        return UserModel()
+    except Exception as e:
+        print(f"Error creating UserModel: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Database connection error"
+        )
 
 @router.post("/register", response_model= UserResponse)
 async def register(user: UserCreate, user_model: UserModel = Depends(get_user_model)):
@@ -37,7 +45,9 @@ async def register(user: UserCreate, user_model: UserModel = Depends(get_user_mo
   return UserResponse(**user_dict)
 
 @router.post("/login", response_model=Token)
-async def login(user_credentials = UserLogin, user_model: UserModel = Depends(get_user_model)):
+async def login(
+   user_credentials: UserLogin,
+   user_model: UserModel = Depends(get_user_model)):
 
    user = await user_model.get_user_by_email(user_credentials.email)
    if not user or not verify_password(user_credentials.password, user["password"]):
@@ -46,11 +56,17 @@ async def login(user_credentials = UserLogin, user_model: UserModel = Depends(ge
          detail="incorrect user id or password"
       )
    access_token_expire = timedelta(minutes= 30)
-   access_token = create_access_token(data={"sub":str(user)}, expire_delta=access_token_expire)
+   access_token = create_access_token(
+    data={"sub":str(user["_id"])},
+    expires_delta=access_token_expire
+    )
    user_dict = user.copy()
    user_dict["id"] = str(user_dict.pop("_id"))
    user_response = UserResponse(**user_dict)
-   return Token(access_token= access_token,token_type="bearer",user= user_response)
+   return Token(
+      access_token= access_token,
+      token_type="bearer",
+      user= user_response)
 
 @router.post("/me", response_model= UserResponse)
 async def get_current_user_info(current_user: UserResponse = Depends(get_current_user)):

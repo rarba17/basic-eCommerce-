@@ -6,14 +6,20 @@ from app.database import db
 
 class UserModel:
   def __init__(self):
-    self.collection = db.get_collections("users")
+      self._collection = None
 
   @property
   def collection(self):
+      """Get the users collection - creates it if not exists"""
       if self._collection is None:
-          self._collection = db.get_collection("users")
+          try:
+              self._collection = db.get_collection("users")
+          except RuntimeError as e:
+              # Handle case where database is not connected yet
+              print(f"Warning: Database not connected - {e}")
+              raise
       return self._collection
-
+  
   async def create_user(self, user_data: dict) -> str:
     user_data["created_at"] = datetime.now(timezone.utc)
     user_data["updated_at"] = datetime.now(timezone.utc)

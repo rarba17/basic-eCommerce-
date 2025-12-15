@@ -54,7 +54,81 @@ async def create_order(
       return OrderResponse(**order_dict)
 
 
-#@router.get("/{order_id}", response_model= OrderResponse)
-#async def get_my_order():
+@router.get("/{order_id}", response_model= List[OrderResponse])
+async def get_my_orders(
+  current_user : dict = Depends(get_current_user),
+  order_model: OrderModel = Depends(get_order_model)
+):
+  orders = await order_model.get_user_orders(current_user.id)
+
+  order_responses =[]
+  for order in orders:
+    order_dict = order.copy()
+    order_dict["id"] = str(order_dict.pop("_id"))
+    order_responses.append(OrderResponse(**order_dict))
+
+  return order_responses
+
+@router.get("/{order_id}", response_model= OrderResponse)
+async def get_order(
+  order_id:str,
+  order_model: OrderModel=Depends(get_order_model),
+  current_user: dict = Depends(get_current_user)
+):
+  order = await order_model.get_order_by_id(order_id)
+  if not order:
+    raise HTTPException(
+      status_code=status.HTTP_404_NOT_FOUND,
+      detail= " order not found "
+    )
+
+  if order["user_id"] != current_user.id and not current_user.is_admin:
+    raise HTTPException(
+      status_code=status.HTTP_403_FORBIDDEN,
+      details="not authoraize to view this order"
+    )
+  order_dict = order.copy()
+  order_dict["id"] = str(order_dict.pop("_id"))
+  return OrderResponse(**order_dict)
+
+@router.put("/{order_id}/status")
+async def update_order_status(
+    order_id: str,
+    status: str,
+    order_model: OrderModel=Depends(get_order_model),
+    current_user: dict = Depends(get_current_user)
+):
+    if not current_user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to update order status"
+        )
+
+    updated = await order_model.update_order_status(order_id, status)
+    if not updated:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Order not found"
+        )
+
+    return {"message": "Order status updated successfully"}
+
+@router.put("/{order_id}/payment")
+async def update_payment_status(
+    order_id: str,
+    is_paid: bool,
+    order_model: OrderModel=Depends(get_order_model),
+    current_user: dict = Depends(get_current_user)
+):
+    updated = await order_model.update_payment_status(order_id, is_paid)
+    if not updated:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Order not found"
+        )
+
+    return {"message": "Payment status updated successfully"}
+
+
 
 

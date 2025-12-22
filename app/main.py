@@ -1,11 +1,10 @@
-
-from fastapi import FastAPI, HTTPException,requests
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 import app
 from app.config import settings
 from app.database import db
-from app.routers import products, orders, auth, cart
+from app.routers import products, orders, auth, cart, seed
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -35,6 +34,7 @@ app.include_router(auth.router)
 app.include_router(products.router)
 app.include_router(orders.router)
 app.include_router(cart.router)
+app.include_router(seed.router)
 
 
 @app.get("/")

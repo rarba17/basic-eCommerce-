@@ -41,3 +41,22 @@ class ProductModel:
             ]
         })
         return await cursor.to_list(length=100)
+
+    async def decrement_stock_atomic(self, product_id: str, quantity: int) -> Optional[dict]:
+        """
+        Atomically decrement stock only if sufficient stock exists.
+        Returns the updated product if successful, None if insufficient stock.
+        This prevents race conditions during concurrent orders.
+        """
+        result = await self.collection.find_one_and_update(
+            {
+                "_id": ObjectId(product_id),
+                "stock": {"$gte": quantity}  # Only update if stock >= quantity
+            },
+            {
+                "$inc": {"stock": -quantity},  # Atomically decrement
+                "$set": {"updated_at": datetime.utcnow()}
+            },
+            return_document=True  # Return the updated document
+        )
+        return result

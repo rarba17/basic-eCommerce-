@@ -23,6 +23,7 @@ async def create_order(
   product_model: ProductModel = Depends(get_product_model),
   order_model: OrderModel = Depends(get_order_model)
 ):
+  # Step 1: Validate all products exist (basic check)
   for item in order.order_items:
     product = await product_model.get_product_by_id(item.product_id)
     if not product:
@@ -30,31 +31,39 @@ async def create_order(
         status_code=status.HTTP_404_NOT_FOUND,
         detail= f"Product {item.product_id} not found"
       )
-    if product["stock"] < item.quantity:
+
+  # Step 2: Create the order in pending state
+  order_data = order.model_dump()
+  order_data["user_id"] = current_user.id
+  order_data["status"] = "pending"
+
+  order_id = await order_model.create_order(order_data)
+  new_order = await order_model.get_order_by_id(order_id)
+
+  # Step 3: Atomically decrement stock for all items
+  # This prevents race conditions - stock check and update happen atomically
+  for item in order.order_items:
+    updated_product = await product_model.decrement_stock_atomic(
+      item.product_id,
+      item.quantity
+    )
+
+    # If decrement failed, it means insufficient stock (race condition occurred)
+    if not updated_product:
+      # Rollback: cancel the order
+      await order_model.update_order_status(order_id, "cancelled")
       raise HTTPException(
         status_code=status.HTTP_400_BAD_REQUEST,
-        detail=f"Insufficient stock for product {item.name}"
+        detail=f"Insufficient stock for product {item.product_id}. Order cancelled."
       )
 
-    order_data = order.model_dump()
-    order_data["user_id"] = current_user.id
-    order_data["status"] = "pending"
+  # Step 4: Return the created order
+  order_dict = new_order.copy()
+  order_dict["_id"] = str(order_dict["_id"])  # Convert ObjectId to string
+  order_dict["id"] = order_dict["_id"]         # Set id field (already string now)
+  return OrderResponse(**order_dict)
 
-    order_id = await order_model.create_order(order_data)
-    new_order = await order_model.get_order_by_id(order_id)
-
-    for item in order.order_items:
-      await product_model.update_product(
-        item.product_id,
-            {"$inc": {"stock": -item.quantity}}
-
-      )
-      order_dict = new_order.copy()
-      order_dict["id"] = str(order_dict.pop("_id"))
-      return OrderResponse(**order_dict)
-
-
-@router.get("/{order_id}", response_model= List[OrderResponse])
+@router.get("/", response_model= List[OrderResponse])
 async def get_my_orders(
   current_user : dict = Depends(get_current_user),
   order_model: OrderModel = Depends(get_order_model)
@@ -64,7 +73,8 @@ async def get_my_orders(
   order_responses =[]
   for order in orders:
     order_dict = order.copy()
-    order_dict["id"] = str(order_dict.pop("_id"))
+    order_dict["_id"] = str(order_dict["_id"])
+    order_dict["id"] = order_dict["_id"]
     order_responses.append(OrderResponse(**order_dict))
 
   return order_responses
@@ -85,16 +95,17 @@ async def get_order(
   if order["user_id"] != current_user.id and not current_user.is_admin:
     raise HTTPException(
       status_code=status.HTTP_403_FORBIDDEN,
-      details="not authoraize to view this order"
+      detail="not authoraize to view this order"
     )
   order_dict = order.copy()
-  order_dict["id"] = str(order_dict.pop("_id"))
+  order_dict["_id"] = str(order_dict["_id"])
+  order_dict["id"] = order_dict["_id"]
   return OrderResponse(**order_dict)
 
 @router.put("/{order_id}/status")
 async def update_order_status(
     order_id: str,
-    status: str,
+    new_status: str,
     order_model: OrderModel=Depends(get_order_model),
     current_user: dict = Depends(get_current_user)
 ):
@@ -104,7 +115,7 @@ async def update_order_status(
             detail="Not authorized to update order status"
         )
 
-    updated = await order_model.update_order_status(order_id, status)
+    updated = await order_model.update_order_status(order_id, new_status)
     if not updated:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
